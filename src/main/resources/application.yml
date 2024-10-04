@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: BookAPI-GraphQL
+
+  graphql:
+    graphiql:
+      enabled: true
+
+  datasource:
+    url: jdbc:h2:mem:testdb
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+logging:
+  level:
+    root: INFO # Définit le niveau de log général à INFO
+    com.amoura.bookapi.service: DEBUG # Niveau de log DEBUG pour la classe de service
