@@ -7,7 +7,10 @@ spring:
       enabled: true
 
   datasource:
-    url: jdbc:h2:mem:testdb
+    url: jdbc:postgresql://localhost:5432/bookdb
+    driver-class-name: org.postgresql.Driver
+    username: postgres
+    password: postgres
 
   jpa:
     hibernate:
@@ -15,5 +18,5 @@ spring:
 
 logging:
   level:
-    root: INFO # Définit le niveau de log général à INFO
-    com.amoura.bookapi.service: DEBUG # Niveau de log DEBUG pour la classe de service
+    root: INFO
+    com.amoura.bookapi.service: DEBUG

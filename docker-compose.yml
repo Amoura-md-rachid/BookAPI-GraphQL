@@ -1,0 +1,61 @@
+
+version: '3.8'
+
+services:
+  bookapi:  # Définition du service pour l'application BookAPI.
+    container_name: bookapi
+    build:
+      context: ./  # Le contexte de construction, généralement le répertoire où se trouve le Dockerfile.
+      dockerfile: Dockerfile  # Spécifie le fichier Dockerfile à utiliser pour construire l'image.
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-db:5432/bookdb  # URL JDBC de la base de données PostgreSQL.
+      - SPRING_DATASOURCE_USERNAME=postgres  # Nom d'utilisateur pour se connecter à PostgreSQL.
+      - SPRING_DATASOURCE_PASSWORD=postgres  # Mot de passe de la base de données, récupéré depuis une variable d'environnement ${DB_PASSWORD}.
+    depends_on:  # Indique que bookapi dépend de postgres-db, et attend qu'il soit prêt.
+      postgres-db:
+        condition: service_healthy  # Attend que le service postgres-db soit "healthy" avant de démarrer ce conteneur.
+    networks:
+      - book-network  # Ce service fait partie du réseau Docker appelé "book-network".
+
+  postgres-db: # Définition du service pour PostgreSQL.
+    image: postgres  # Utilise l'image Docker officielle de PostgreSQL version 15.
+    container_name: postgres-db  # Nom du conteneur pour PostgreSQL.
+    environment:
+      - POSTGRES_USER=postgres  # Définit l'utilisateur PostgreSQL comme 'postgres'.
+      - POSTGRES_PASSWORD=postgres  # Définit le mot de passe pour l'utilisateur 'postgres', récupéré depuis une variable d'environnement ${DB_PASSWORD:-postgres}, avec 'defaultpassword' comme valeur par défaut si non définie.
+      - POSTGRES_DB=bookdb  # Crée une base de données PostgreSQL appelée 'bookdb'.
+    ports:
+      - "5432:5432"  # Expose le port 5432 du conteneur sur le port 5432 de l'hôte.
+    volumes:
+      - pg_data:/var/lib/postgresql/data  # Monte un volume persistant pour stocker les données de la base de données.
+    healthcheck: # Configure un contrôle de l'état du service PostgreSQL.
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]  # Vérifie que PostgreSQL est prêt en utilisant la commande `pg_isready`.
+      interval: 10s  # Intervalle entre chaque vérification.
+      timeout: 5s  # Temps maximum pour chaque vérification.
+      retries: 5  # Nombre de tentatives avant de considérer que le service est "unhealthy".
+    networks:
+      - book-network  # Ce service fait partie du réseau Docker "book-network".
+
+
+  pgweb:  # Définition du service pour pgweb, une interface web pour administrer PostgreSQL.
+    container_name: pgweb  # Nom du conteneur pour pgweb.
+    restart: always  # Redémarre le conteneur automatiquement si jamais il plante.
+    image: sosedoff/pgweb  # Utilise l'image officielle de pgweb.
+    ports:
+      - "8090:8081"  # Mappe le port 8090 de l'hôte vers le port 8081 du conteneur pgweb.
+    environment:
+      - DATABASE_URL=postgres://postgres:${DB_PASSWORD:-postgres}@postgres-db:5432/bookdb?sslmode=disable  # URL de connexion PostgreSQL pour pgweb.
+    depends_on:
+      - postgres-db  # Ce service attend que postgres-db soit opérationnel avant de démarrer.
+    networks:
+      - book-network  # Ce service fait partie du réseau Docker "book-network".
+
+volumes:
+  pg_data:  # Définit un volume persistant pour stocker les données PostgreSQL.
+    driver: local  # Utilise le pilote local pour le volume (stockage sur le disque local de l'hôte).
+
+networks:
+  book-network:  # Définit un réseau Docker nommé "book-network".
+    driver: bridge  # Utilise le pilote de réseau bridge, qui permet la communication entre conteneurs sur le même réseau.
