@@ -1,23 +1,28 @@
-# Étape de build
-FROM maven:3.9.5-eclipse-temurin-21-focal AS build
+# Use a valid Maven image with Eclipse Temurin JDK 21
+FROM maven:3.9.5-eclipse-temurin-21 AS build
 
 WORKDIR /app
 
-COPY pom.xml .
-COPY src ./src
+# Copy pom.xml and download dependencies
+COPY pom.xml ./
+RUN mvn dependency:go-offline
 
+# Copy the source code and package the application
+COPY src ./src
 RUN mvn clean package -DskipTests
 
-# Étape de production
+# Use a lightweight JRE image for runtime
 FROM eclipse-temurin:21-jre-jammy
 
 WORKDIR /app
 
+# Copy the built JAR file from the build stage
 COPY --from=build /app/target/*.jar app.jar
 
+# Expose the port and run the application
 EXPOSE 8081
+ENTRYPOINT ["java", "-jar", "app.jar"]
 
-ENTRYPOINT ["java", "--enable-preview", "-jar", "app.jar"]
 
 
 
